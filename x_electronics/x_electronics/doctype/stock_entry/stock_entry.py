@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-
+from x_electronics.utils import get_valuation_rate
 
 class StockEntry(Document):
 	# begin: auto-generated types
@@ -128,7 +128,7 @@ class StockEntry(Document):
 			elif self.entry_type == "Consume":
 				self._make_sle(row.item, row.source_warehouse, -row.qty, None)
 			elif self.entry_type == "Transfer":
-				outgoing_rate = self._get_valuation_rate(row.item, row.source_warehouse)
+				outgoing_rate = get_valuation_rate(row.item, row.source_warehouse, as_of=self.posting_datetime)
 				self._make_sle(row.item, row.source_warehouse, -row.qty, None)
 				self._make_sle(row.item, row.target_warehouse, row.qty, outgoing_rate)
 	
@@ -150,20 +150,6 @@ class StockEntry(Document):
 			{"voucher_type": self._DOCTYPE_NAME, "voucher_no": self.name},
 		)
 
-	def _get_valuation_rate(self, item, warehouse):
-		"""Moving-average rate of an item in a warehouse, computed from the ledger."""
-		qty, value = frappe.db.sql(
-			"""
-			SELECT
-				COALESCE(SUM(actual_qty), 0),
-				COALESCE(SUM(actual_qty * COALESCE(incoming_rate, 0)), 0)
-			FROM `tabStock Ledger Entry`
-			WHERE item = %(item)s
-			  AND warehouse = %(warehouse)s
-			  AND posting_datetime <= %(posting_datetime)s
-			""",
-			{"item": item, "warehouse": warehouse, "posting_datetime": self.posting_datetime},
-		)[0]
-		return (value / qty) if qty else 0
+
 
 	_DOCTYPE_NAME = "Stock Entry"
