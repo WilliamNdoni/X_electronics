@@ -8,8 +8,7 @@ def get_stock_state(item: str, warehouse: str, as_of=None, exclude_voucher: str 
 	"""Return (qty, value) for an item in a warehouse by walking the ledger.
 
 	Receipts add value at their incoming rate; consumption removes value at
-	the moving average prevailing at that point. This is the single source of
-	truth for valuation - used by reports and by Stock Entry for transfers.
+	the moving average prevailing at that point. 
 	"""
 	conditions = ""
 	values = {"item": item, "warehouse": warehouse}
