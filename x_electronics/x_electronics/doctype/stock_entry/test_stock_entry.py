@@ -134,6 +134,11 @@ def create_item(code):
 	return code
 
 
-def create_warehouse(name, is_group=0):
-	frappe.get_doc({"doctype": "Warehouse", "warehouse_name": name, "is_group": is_group}).insert()
+def create_warehouse(name, is_group=0, parent_warehouse=None):
+	frappe.get_doc({
+		"doctype": "Warehouse",
+		"warehouse_name": name,
+		"is_group": is_group,
+		"parent_warehouse": parent_warehouse,
+	}).insert()
 	return name
