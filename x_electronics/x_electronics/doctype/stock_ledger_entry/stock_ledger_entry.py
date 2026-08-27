@@ -18,6 +18,7 @@ class StockLedgerEntry(Document):
 		incoming_rate: DF.Currency
 		item: DF.Link
 		posting_datetime: DF.Datetime
+		valuation_method: DF.Literal["Moving Average", "FIFO", "LIFO"]
 		voucher_no: DF.Data
 		voucher_type: DF.Data
 		warehouse: DF.Link

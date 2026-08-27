@@ -11,7 +11,8 @@
   "entry_type",
   "posting_datetime",
   "items",
-  "remarks"
+  "remarks",
+  "valuation_method"
  ],
  "fields": [
   {
@@ -55,14 +56,21 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "default": "Moving Average",
+   "fieldname": "valuation_method",
+   "fieldtype": "Select",
+   "label": "Valuation Method",
+   "options": "Moving Average\nFIFO\nLIFO"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-22 16:15:53.149635",
- "modified_by": "Administrator",
+ "modified": "2026-08-27 12:16:35.894141",
+ "modified_by": "ndoniwilliam09@gmail.com",
  "module": "X Electronics",
  "name": "Stock Entry",
  "naming_rule": "Expression",

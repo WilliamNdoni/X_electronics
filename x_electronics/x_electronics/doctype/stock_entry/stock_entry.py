@@ -21,6 +21,7 @@ class StockEntry(Document):
 		items: DF.Table[StockEntryItem]
 		posting_datetime: DF.Datetime
 		remarks: DF.SmallText | None
+		valuation_method: DF.Literal["Moving Average", "FIFO", "LIFO"]
 	# end: auto-generated types
 
 	def validate(self):

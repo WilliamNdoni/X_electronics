@@ -13,7 +13,8 @@
   "actual_qty",
   "incoming_rate",
   "voucher_type",
-  "voucher_no"
+  "voucher_no",
+  "valuation_method"
  ],
  "fields": [
   {
@@ -66,13 +67,19 @@
    "fieldtype": "Data",
    "label": "Voucher No",
    "reqd": 1
+  },
+  {
+   "fieldname": "valuation_method",
+   "fieldtype": "Select",
+   "label": "Valuation Method",
+   "options": "Moving Average\nFIFO\nLIFO"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-22 14:38:51.484951",
- "modified_by": "Administrator",
+ "modified": "2026-08-27 12:17:42.945293",
+ "modified_by": "ndoniwilliam09@gmail.com",
  "module": "X Electronics",
  "name": "Stock Ledger Entry",
  "naming_rule": "Expression",
