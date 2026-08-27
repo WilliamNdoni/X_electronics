@@ -14,10 +14,11 @@ class IntegrationTestStockEntry(IntegrationTestCase):
 		self.wh_source = create_warehouse(f"_Test Floor A {suffix}")
 		self.wh_target = create_warehouse(f"_Test Floor B {suffix}")
 
-	def make_entry(self, entry_type, qty, rate=None, source=None, target=None, submit=True):
+	def make_entry(self, entry_type, qty, rate=None, source=None, target=None, submit=True, method=None):
 		entry = frappe.get_doc({
 			"doctype": "Stock Entry",
 			"entry_type": entry_type,
+			"valuation_method": method,
 			"posting_datetime": frappe.utils.now_datetime(),
 			"items": [{
 				"item": self.item,
@@ -117,7 +118,58 @@ class IntegrationTestStockEntry(IntegrationTestCase):
 		self.make_entry("Receipt", qty=50, rate=520, target=self.wh_source)
 		# Testing the above, this should be (70*500 + 50*520) / 120 =  508.333...
 		self.assertAlmostEqual(get_valuation_rate(self.item, self.wh_source), 508.3333, places=3)
+	
+	# Testing FIFO / LIFO valuation
 
+	def test_fifo_consumes_oldest_layers_first(self):
+		self.make_entry("Receipt", qty=100, rate=500, target=self.wh_source)
+		self.make_entry("Receipt", qty=100, rate=600, target=self.wh_source)
+		self.make_entry("Consume", qty=120, source=self.wh_source, method="FIFO")
+		# Consumed: 100@500 + 20@600. Remaining: 80 @ 600.
+		qty, value = get_stock_state(self.item, self.wh_source)
+		self.assertAlmostEqual(qty, 80)
+		self.assertAlmostEqual(value, 48000)
+
+	def test_lifo_consumes_newest_layers_first(self):
+		self.make_entry("Receipt", qty=100, rate=500, target=self.wh_source)
+		self.make_entry("Receipt", qty=100, rate=600, target=self.wh_source)
+		self.make_entry("Consume", qty=120, source=self.wh_source, method="LIFO")
+		# Consumed: 100@600 + 20@500. Remaining: 80 @ 500.
+		qty, value = get_stock_state(self.item, self.wh_source)
+		self.assertAlmostEqual(qty, 80)
+		self.assertAlmostEqual(value, 40000)
+
+	def test_methods_split_value_differently_but_conserve_total(self):
+		# Same physical events as above under MA, for contrast with FIFO/LIFO.
+		self.make_entry("Receipt", qty=100, rate=500, target=self.wh_source)
+		self.make_entry("Receipt", qty=100, rate=600, target=self.wh_source)
+		self.make_entry("Consume", qty=120, source=self.wh_source)  # default MA
+		# MA: avg 550; remaining 80 * 550 = 44,000 (between FIFO's 48k and LIFO's 40k).
+		qty, value = get_stock_state(self.item, self.wh_source)
+		self.assertAlmostEqual(value, 44000)
+
+	def test_fifo_transfer_carries_layer_derived_value(self):
+		self.make_entry("Receipt", qty=50, rate=500, target=self.wh_source)
+		self.make_entry("Receipt", qty=50, rate=600, target=self.wh_source)
+		self.make_entry("Transfer", qty=60, source=self.wh_source, target=self.wh_target, method="FIFO")
+		# Outgoing under FIFO: 50@500 + 10@600 = 31,000 -> incoming rate 516.67
+		tgt_qty, tgt_value = get_stock_state(self.item, self.wh_target)
+		self.assertAlmostEqual(tgt_qty, 60)
+		self.assertAlmostEqual(tgt_value, 31000)
+		# Source keeps 40 @ 600; total value conserved.
+		src_qty, src_value = get_stock_state(self.item, self.wh_source)
+		self.assertAlmostEqual(src_value, 24000)
+		self.assertAlmostEqual(src_value + tgt_value, 55000)
+
+	def test_mixed_methods_in_one_history(self):
+		self.make_entry("Receipt", qty=100, rate=500, target=self.wh_source)
+		self.make_entry("Receipt", qty=100, rate=600, target=self.wh_source)
+		self.make_entry("Consume", qty=50, source=self.wh_source, method="FIFO")   # eats 50@500
+		self.make_entry("Consume", qty=50, source=self.wh_source, method="LIFO")   # eats 50@600
+		# Remaining: 50@500 + 50@600 = 55,000
+		qty, value = get_stock_state(self.item, self.wh_source)
+		self.assertAlmostEqual(qty, 100)
+		self.assertAlmostEqual(value, 55000)
 
 # Helper functions
 
