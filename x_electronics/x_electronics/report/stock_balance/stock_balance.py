@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from x_electronics.utils import apply_row, layer_totals
 
 
 def execute(filters: dict | None = None):
@@ -43,7 +44,7 @@ def get_data(filters) -> list[dict]:
 
 	rows = frappe.db.sql(
 		f"""
-		SELECT item, warehouse, actual_qty, incoming_rate
+		SELECT item, warehouse, actual_qty, incoming_rate, valuation_method
 		FROM `tabStock Ledger Entry`
 		WHERE 1=1 {conditions}
 		ORDER BY item, warehouse, posting_datetime, name
@@ -52,23 +53,18 @@ def get_data(filters) -> list[dict]:
 		as_dict=True,
 	)
 
-	# Moving-average walk aggregated to one line per item+warehouse.
+	# Walk modified to use the picked valuation_method
 	state = {}
 	for row in rows:
 		key = (row.item, row.warehouse)
-		qty, value = state.get(key, (0.0, 0.0))
-		if row.actual_qty >= 0:
-			value += row.actual_qty * (row.incoming_rate or 0)
-		else:
-			avg = value / qty if qty else 0
-			value += row.actual_qty * avg
-		qty += row.actual_qty
-		state[key] = (qty, value)
+		layers = state.setdefault(key, [])
+		apply_row(layers, row.actual_qty, row.incoming_rate, row.valuation_method)
 
 	data = []
-	for (item, warehouse), (qty, value) in sorted(state.items()):
+	for (item, warehouse), layers in sorted(state.items()):
+		qty, value = layer_totals(layers)
 		if qty == 0 and value == 0:
-			continue  
+			continue
 		data.append({
 			"item": item,
 			"warehouse": warehouse,
