@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from x_electronics.utils import get_valuation_rate
+from x_electronics.utils import get_outgoing_rate
 
 class StockEntry(Document):
 	# begin: auto-generated types
@@ -129,7 +129,7 @@ class StockEntry(Document):
 			elif self.entry_type == "Consume":
 				self._make_sle(row.item, row.source_warehouse, -row.qty, None)
 			elif self.entry_type == "Transfer":
-				outgoing_rate = get_valuation_rate(row.item, row.source_warehouse, as_of=self.posting_datetime)
+				outgoing_rate = get_outgoing_rate(row.item, row.source_warehouse, row.qty, self.valuation_method, as_of=self.posting_datetime,)
 				self._make_sle(row.item, row.source_warehouse, -row.qty, None)
 				self._make_sle(row.item, row.target_warehouse, row.qty, outgoing_rate)
 	
@@ -143,6 +143,7 @@ class StockEntry(Document):
 			"incoming_rate": incoming_rate,
 			"voucher_type": self._DOCTYPE_NAME,
 			"voucher_no": self.name,
+			"valuation_method": self.valuation_method or "Moving Average"
 		}).insert()
 	
 	def _delete_stock_ledger_entries(self):
